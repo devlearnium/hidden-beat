@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Скрытый Бит</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --element-color: #f0f0f0;
+            --text-color: #1a1a1a;
+            --text-light: #888888;
+            --track-color: #e8e8e8;
+            --accent-color: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            height: 100dvh;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #error-box {
+            display: none;
+            position: fixed;
+            top: 10px; left: 10px; right: 10px;
+            background: #ffebee; color: #c62828;
+            padding: 15px; border-radius: 16px;
+            font-size: 14px; z-index: 9999;
+        }
+
+        .app-card {
+            background-color: var(--card-bg);
+            border-radius: 36px;
+            padding: 25px 20px;
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            max-height: 750px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header { text-align: center; width: 100%;}
+        .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+        
+        /* Переключатель размеров */
+        .time-signatures {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+            background: var(--element-color);
+            padding: 5px;
+            border-radius: 16px;
+        }
+
+        .sig-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .sig-btn.active {
+            background: var(--card-bg);
+            color: var(--text-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Основная зона */
+        .main-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            flex-grow: 1;
+            padding: 10px;
+        }
+
+        /* Левая часть: BPM и индикаторы */
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .bpm-display {
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .bpm-value {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -2px;
+        }
+
+        .bpm-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        /* Кружочки-индикаторы долей */
+        .beat-indicators {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            max-width: 140px;
+        }
+
+        .beat-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--element-color);
+            transition: background-color 0.1s, transform 0.1s;
+        }
+
+        .beat-dot.active {
+            background-color: var(--accent-color);
+            transform: scale(1.2);
+        }
+
+        /* Правая часть: Слайдер */
+        .slider-wrapper {
+            height: 100%;
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .slider-track-line {
+            position: absolute;
+            width: 8px; 
+            height: 280px;
+            background: var(--track-color);
+            border-radius: 4px;
+            z-index: 0;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 300px;
+            height: 60px; 
+            background: transparent;
+            transform: rotate(-90deg);
+            outline: none;
+            position: absolute;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 60px;
+            background: transparent; border: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 60px; 
+            width: 60px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05);
+            margin-top: 0px; 
+            position: relative; z-index: 2;
+            transition: transform 0.1s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+
+        /* Нижняя панель с кнопками */
+        .bottom-controls {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .tap-btn {
+            flex: 0 0 80px;
+            padding: 22px 0;
+            border-radius: 30px;
+            background-color: var(--accent-color);
+            border: none;
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.1s;
+            letter-spacing: 1px;
+        }
+
+        .tap-btn:active {
+            transform: scale(0.95);
+            background-color: #333333;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 22px;
+            border-radius: 30px;
+            background-color: var(--element-color);
+            border: none;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            letter-spacing: 0.5px;
+        }
+
+        .action-btn.running {
+            background-color: var(--accent-color);
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="error-box"></div>
+
+    <div class="app-card">
+        <div class="header">
+            <h1>Скрытый Бит</h1>
+            <div class="time-signatures">
+                <button class="sig-btn" data-sig="2">2/4</button>
+                <button class="sig-btn" data-sig="3">3/4</button>
+                <button class="sig-btn active" data-sig="4">4/4</button>
+                <button class="sig-btn" data-sig="6">6/8</button>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="info-panel">
+                <div class="bpm-display">
+                    <span class="bpm-value" id="bpmValue">120</span>
+                    <span class="bpm-label">BPM</span>
+                </div>
+                <div class="beat-indicators" id="beatIndicators">
+                    <!-- Заполняется через JS -->
+                </div>
+            </div>
+
+            <div class="slider-wrapper">
+                <div class="slider-track-line"></div>
+                <input type="range" id="bpmSlider" min="40" max="240" value="120">
+            </div>
+        </div>
+
+        <div class="bottom-controls">
+            <button class="tap-btn" id="tapBtn">TAP</button>
+            <button class="action-btn" id="actionBtn">СТАРТ</button>
+        </div>
+    </div>
+
+    <audio id="bgAudio" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"></audio>
+
+    <script>
+        window.onerror = function(msg, src, line) {
+            const err = document.getElementById('error-box');
+            err.style.display = 'block';
+            err.innerHTML = `<b>Ошибка:</b> ${msg} (строка ${line})`;
+        };
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW reg failed', err));
+        }
+
+        // DOM
+        const actionBtn = document.getElementById('actionBtn');
+        const tapBtn = document.getElementById('tapBtn');
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmValue = document.getElementById('bpmValue');
+        const beatIndicators = document.getElementById('beatIndicators');
+        const sigBtns = document.querySelectorAll('.sig-btn');
+        const bgAudio = document.getElementById('bgAudio');
+
+        // Состояние
+        let isRunning = false;
+        let bpm = 120;
+        let beatsPerMeasure = 4; 
+        let currentBeat = 0; 
+        
+        let audioCtx = null;
+        let nextNoteTime = 0; 
+        let timerID = null; 
+        let wakeLock = null;
+
+        // Для Tap Tempo
+        let tapTimes = [];
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function updateIndicators() {
+            beatIndicators.innerHTML = '';
+            for (let i = 0; i < beatsPerMeasure; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'beat-dot';
+                if (i === 0) {
+                    dot.style.width = '22px';
+                    dot.style.height = '22px';
+                }
+                beatIndicators.appendChild(dot);
+            }
+            highlightBeat(-1);
+        }
+
+        function highlightBeat(beatIndex) {
+            const dots = document.querySelectorAll('.beat-dot');
+            dots.forEach((dot, index) => {
+                if (index === beatIndex) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
+        }
+
+        function triggerBeat(beat) {
+            highlightBeat(beat);
+
+            if (navigator.vibrate) {
+                if (beat === 0) {
+                    navigator.vibrate(80); // Сильная доля
+                } else {
+                    navigator.vibrate(35); // Слабые доли
+                }
+            }
+        }
+
+        function scheduler() {
+            const lookahead = 25.0; 
+            const scheduleAheadTime = 0.1; 
+
+            while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+                const beat = currentBeat;
+                const timeUntilNote = (nextNoteTime - audioCtx.currentTime) * 1000;
+                
+                setTimeout(() => {
+                    if (isRunning) triggerBeat(beat);
+                }, Math.max(0, timeUntilNote));
+
+                const secondsPerBeat = 60.0 / bpm;
+                nextNoteTime += secondsPerBeat;
+                currentBeat = (currentBeat + 1) % beatsPerMeasure;
+            }
+        }
+
+        function startMetronome() {
+            initAudio();
+            bgAudio.volume = 0.01;
+            bgAudio.play().catch(e => console.log("BG blocked"));
+
+            currentBeat = 0;
+            nextNoteTime = audioCtx.currentTime + 0.05;
+            
+            isRunning = true;
+            actionBtn.textContent = 'СТОП';
+            actionBtn.classList.add('running');
+
+            timerID = setInterval(scheduler, 25);
+            requestWakeLock();
+        }
+
+        function stopMetronome() {
+            isRunning = false;
+            actionBtn.textContent = 'СТАРТ';
+            actionBtn.classList.remove('running');
+            
+            clearInterval(timerID);
+            timerID = null;
+            
+            highlightBeat(-1);
+            if (navigator.vibrate) navigator.vibrate(0);
+            
+            bgAudio.pause();
+            bgAudio.currentTime = 0;
+
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => { wakeLock = null; });
+            }
+        }
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {}
+        }
+
+        // --- Обработчики событий ---
+
+        actionBtn.addEventListener('click', () => {
+            if (!isRunning) startMetronome();
+            else stopMetronome();
+        });
+
+        bpmSlider.addEventListener('input', (e) => {
+            bpm = parseInt(e.target.value);
+            bpmValue.textContent = bpm;
+        });
+
+        // Логика Tap Tempo
+        tapBtn.addEventListener('click', () => {
+            const now = Date.now();
+            
+            // Если прошло больше 2 секунд с последнего тапа — начинаем заново
+            if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 2000) {
+                tapTimes = [];
+            }
+            
+            tapTimes.push(now);
+            
+            // Нужно хотя бы 2 нажатия для расчета
+            if (tapTimes.length >= 2) {
+                // Вычисляем средний интервал между нажатиями
+                const totalDiff = tapTimes[tapTimes.length - 1] - tapTimes[0];
+                const avgMs = totalDiff / (tapTimes.length - 1);
+                
+                // Переводим в BPM (60000 мс в минуте)
+                let newBpm = Math.round(60000 / avgMs);
+                
+                // Ограничиваем допустимым диапазоном (40 - 240)
+                newBpm = Math.max(40, Math.min(240, newBpm));
+                
+                // Обновляем интерфейс и переменную
+                bpm = newBpm;
+                bpmSlider.value = bpm;
+                bpmValue.textContent = bpm;
+
+                // Легкая вибрация для подтверждения, что тап засчитан
+                if (navigator.vibrate) navigator.vibrate(20);
+            }
+            
+            // Храним только последние 5 тапов для точного среднего
+            if (tapTimes.length > 5) tapTimes.shift();
+        });
+
+        sigBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sigBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                beatsPerMeasure = parseInt(btn.dataset.sig);
+                updateIndicators();
+                
+                if (isRunning) currentBeat = 0;
+            });
+        });
+
+        // Инициализация
+        updateIndicators();
+    </script>
+</body>
+</html>
